@@ -1,4 +1,4 @@
-const CACHE = 'mindful-pace-v7';
+const CACHE = 'mindful-pace-v8';
 const ASSETS = [
   './',
   './index.html',

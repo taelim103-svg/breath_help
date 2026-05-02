@@ -113,6 +113,9 @@ const metro = {
   visualBeatIdx: 0,      // index into scheduledBeats for visual loop
   totalBeatsShown: 0,    // 사용자에게 보여주는 누적 박자 수 (배열 정리와 무관하게 단조 증가)
   lastBeatTime: 0,       // 마지막 박자가 들린 audio time (페이드 계산용)
+  // iOS 백그라운드 재생용 (HTML5 audio 경로)
+  iosAudio: null,
+  iosBlobUrl: null,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -429,11 +432,7 @@ function bindMetronome() {
 }
 
 async function startMetronome() {
-  initAudio();
-  const ctx = state.audioCtx;
-  if (!ctx) return;
-  if (ctx.state === 'suspended') await ctx.resume();
-
+  // 공통 상태 초기화
   metro.running = true;
   metro.paused = false;
   metro.beatCount = 0;
@@ -443,7 +442,6 @@ async function startMetronome() {
   metro.lastBeatTime = 0;
   metro.startedAt = performance.now();
   metro.pausedElapsed = 0;
-  metro.nextBeatTime = ctx.currentTime + 0.1;
 
   $('#metro-bpm-big').textContent = metro.bpm;
   $('#metro-beats').textContent = '0';
@@ -451,11 +449,125 @@ async function startMetronome() {
   $('#screen-metro-run').classList.remove('paused');
   $('#btn-metro-pause').textContent = '❚❚';
 
+  // iOS는 HTML5 audio 경로, 그 외(Android/Desktop)는 Web Audio 스케줄러
+  if (isIOS()) {
+    await startMetronomeIOS();
+  } else {
+    await startMetronomeWebAudio();
+  }
+}
+
+async function startMetronomeWebAudio() {
+  initAudio();
+  const ctx = state.audioCtx;
+  if (!ctx) return;
+  if (ctx.state === 'suspended') await ctx.resume();
+  metro.nextBeatTime = ctx.currentTime + 0.1;
+
   showScreen('screen-metro-run');
   await requestWakeLock();
-
   metroScheduler();
   metro.rafId = requestAnimationFrame(metroVisualLoop);
+}
+
+async function startMetronomeIOS() {
+  // 사용자 제스처 안에서 호출되므로 audio 재생 가능
+  // 1) audio context 깨우기 (해도 손해 안 봄)
+  initAudio();
+  if (state.audioCtx && state.audioCtx.state === 'suspended') {
+    state.audioCtx.resume().catch(() => {});
+  }
+
+  // 2) 트랙 생성 (1~2초 소요)
+  $('#btn-metro-start').disabled = true;
+  $('#btn-metro-start').textContent = '준비 중…';
+  try {
+    const url = await generateClickTrackBlob(metro.bpm, metro.clickType, metro.click ? metro.volume : 0);
+    metro.iosBlobUrl = url;
+
+    const audio = new Audio(url);
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.playsInline = true;
+    metro.iosAudio = audio;
+    await audio.play();
+
+    setupMediaSession();
+  } catch (err) {
+    console.error('iOS metronome start failed', err);
+    metro.running = false;
+  } finally {
+    $('#btn-metro-start').disabled = false;
+    $('#btn-metro-start').textContent = '시작하기';
+  }
+
+  if (!metro.running) return;
+
+  showScreen('screen-metro-run');
+  await requestWakeLock();
+  metro.rafId = requestAnimationFrame(metroVisualLoopIOS);
+}
+
+function setupMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: `${metro.bpm} BPM`,
+      artist: '마인드풀 페이스',
+      album: '달리기 메트로놈',
+    });
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (metro.paused) toggleMetroPause();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (!metro.paused) toggleMetroPause();
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+      stopMetronome();
+      showScreen('screen-home');
+    });
+  } catch (e) { /* ignore */ }
+}
+
+// iOS 시각 루프: audio.currentTime 기반으로 비트 위상 추정
+function metroVisualLoopIOS() {
+  if (!metro.running) return;
+  const audio = metro.iosAudio;
+  const pulse = $('#metro-pulse');
+  if (!audio || pulse == null) {
+    metro.rafId = requestAnimationFrame(metroVisualLoopIOS);
+    return;
+  }
+
+  const interval = 60.0 / metro.bpm;
+  // 추정 박자 인덱스: 누적 재생 시간 / 비트 간격
+  const cumulativeSec = (metro.pausedElapsed + (metro.paused ? 0 : (performance.now() - metro.startedAt))) / 1000;
+  const expectedBeat = Math.floor(cumulativeSec / interval);
+
+  if (expectedBeat > metro.totalBeatsShown) {
+    while (metro.totalBeatsShown < expectedBeat) {
+      metro.totalBeatsShown++;
+      if (metro.vibrate && 'vibrate' in navigator && !metro.paused) navigator.vibrate(30);
+    }
+    metro.lastBeatTime = expectedBeat * interval; // sec 단위
+    pulse.classList.remove('beat');
+    void pulse.offsetWidth;
+    pulse.classList.add('beat');
+    $('#metro-beats').textContent = metro.totalBeatsShown;
+  }
+
+  // 페이드: 마지막 박자 이후 진행 위상으로 페이드
+  const sinceLast = cumulativeSec - metro.lastBeatTime;
+  const phase = Math.min(1, sinceLast / (interval * 0.5));
+  pulse.style.opacity = (1 - phase);
+
+  // 경과 시간 표시
+  const total = Math.floor(cumulativeSec);
+  const m = String(Math.floor(total / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
+  $('#metro-elapsed').textContent = `${m}:${s}`;
+
+  metro.rafId = requestAnimationFrame(metroVisualLoopIOS);
 }
 
 function metroScheduler() {
@@ -533,6 +645,24 @@ function stopMetronome() {
   metro.schedulerId = null;
   metro.rafId = null;
   metro.scheduledBeats = [];
+
+  if (metro.iosAudio) {
+    try { metro.iosAudio.pause(); metro.iosAudio.src = ''; } catch (e) {}
+    metro.iosAudio = null;
+  }
+  if (metro.iosBlobUrl) {
+    URL.revokeObjectURL(metro.iosBlobUrl);
+    metro.iosBlobUrl = null;
+  }
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('stop', null);
+      navigator.mediaSession.metadata = null;
+    } catch (e) {}
+  }
+
   releaseWakeLock();
   const pulse = $('#metro-pulse');
   if (pulse) { pulse.classList.remove('beat'); pulse.style.opacity = ''; }
@@ -540,30 +670,42 @@ function stopMetronome() {
 
 function toggleMetroPause() {
   if (!metro.running) return;
-  const ctx = state.audioCtx;
   metro.paused = !metro.paused;
   $('#screen-metro-run').classList.toggle('paused', metro.paused);
   $('#btn-metro-pause').textContent = metro.paused ? '▶' : '❚❚';
+
   if (metro.paused) {
     metro.pausedAt = performance.now();
     metro.pausedElapsed += metro.pausedAt - metro.startedAt;
-    if (metro.schedulerId) clearTimeout(metro.schedulerId);
-    metro.schedulerId = null;
-    if (metro.rafId) cancelAnimationFrame(metro.rafId);
-    metro.rafId = null;
+    if (metro.iosAudio) {
+      try { metro.iosAudio.pause(); } catch (e) {}
+    } else {
+      if (metro.schedulerId) clearTimeout(metro.schedulerId);
+      metro.schedulerId = null;
+      if (metro.rafId) cancelAnimationFrame(metro.rafId);
+      metro.rafId = null;
+    }
   } else {
     metro.startedAt = performance.now();
-    metro.nextBeatTime = ctx.currentTime + 0.1;
-    metroScheduler();
-    metro.rafId = requestAnimationFrame(metroVisualLoop);
+    if (metro.iosAudio) {
+      metro.iosAudio.play().catch(() => {});
+      metro.rafId = requestAnimationFrame(metroVisualLoopIOS);
+    } else {
+      const ctx = state.audioCtx;
+      metro.nextBeatTime = ctx.currentTime + 0.1;
+      metroScheduler();
+      metro.rafId = requestAnimationFrame(metroVisualLoop);
+    }
   }
 }
 
 function scheduleClick(time, type) {
-  const ctx = state.audioCtx;
-  const v = metro.volume;
+  scheduleClickAt(state.audioCtx, state.audioCtx.destination, time, type, metro.volume);
+}
+
+// ctx와 destination을 인자로 받아 OfflineAudioContext에서도 재사용 가능
+function scheduleClickAt(ctx, dest, time, type, v) {
   if (type === 'wood') {
-    // 짧은 노이즈 + 밴드패스 (우드블록 느낌)
     const dur = 0.04;
     const bufSize = Math.floor(ctx.sampleRate * dur);
     const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
@@ -579,7 +721,7 @@ function scheduleClick(time, type) {
     filter.Q.value = 8;
     const gain = ctx.createGain();
     gain.gain.value = 1.4 * v;
-    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.connect(filter).connect(gain).connect(dest);
     src.start(time);
     src.stop(time + dur);
   } else if (type === 'beep') {
@@ -590,7 +732,7 @@ function scheduleClick(time, type) {
     gain.gain.setValueAtTime(0, time);
     gain.gain.linearRampToValueAtTime(0.55 * v, time + 0.001);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
-    osc.connect(gain).connect(ctx.destination);
+    osc.connect(gain).connect(dest);
     osc.start(time);
     osc.stop(time + 0.05);
   } else { // tick
@@ -602,10 +744,72 @@ function scheduleClick(time, type) {
     gain.gain.setValueAtTime(0, time);
     gain.gain.linearRampToValueAtTime(0.7 * v, time + 0.001);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
-    osc.connect(gain).connect(ctx.destination);
+    osc.connect(gain).connect(dest);
     osc.start(time);
     osc.stop(time + 0.04);
   }
+}
+
+// AudioBuffer → WAV bytes (16-bit PCM mono)
+function audioBufferToWav(audioBuffer) {
+  const numChannels = 1;
+  const sampleRate = audioBuffer.sampleRate;
+  const samples = audioBuffer.getChannelData(0);
+  const dataLength = samples.length * 2;
+  const buffer = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(buffer);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataLength, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+  return buffer;
+}
+
+// 매끄러운 루프 WAV blob 생성 (정수 박자 길이로 정렬)
+async function generateClickTrackBlob(bpm, clickType, volume) {
+  const beatInterval = 60.0 / bpm;
+  // 약 30초 분량을 정수 박자에 맞춰
+  const targetSec = 30;
+  const numBeats = Math.max(8, Math.round(targetSec / beatInterval));
+  const durSec = numBeats * beatInterval;
+
+  const sampleRate = 44100;
+  const totalSamples = Math.ceil(durSec * sampleRate);
+  const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const offlineCtx = new OfflineCtx(1, totalSamples, sampleRate);
+
+  for (let i = 0; i < numBeats; i++) {
+    scheduleClickAt(offlineCtx, offlineCtx.destination, i * beatInterval, clickType, volume);
+  }
+
+  const rendered = await offlineCtx.startRendering();
+  const wavBytes = audioBufferToWav(rendered);
+  return URL.createObjectURL(new Blob([wavBytes], { type: 'audio/wav' }));
+}
+
+function isIOS() {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.platform) ||
+    (navigator.userAgent.includes('Mac') && 'ontouchend' in document)
+  );
 }
 
 // ========== Background Music ==========

@@ -293,6 +293,7 @@ html, body {
   transition: transform 0.1s;
 }
 .btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 .tip {
   text-align: center;
