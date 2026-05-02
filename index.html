@@ -79,6 +79,24 @@
             </label>
           </div>
         </div>
+
+        <div class="field">
+          <label>배경음</label>
+          <div class="chip-row">
+            <button class="chip active" data-music="off">끄기</button>
+            <button class="chip" data-music="drone">Drone</button>
+            <button class="chip" data-music="ocean">Ocean</button>
+          </div>
+          <div class="chip-row tracks-row">
+            <button class="chip" data-music="track1">트랙 1</button>
+            <button class="chip" data-music="track2">트랙 2</button>
+            <button class="chip" data-music="track3">트랙 3</button>
+          </div>
+          <div id="music-volume-wrap" class="vol-wrap hidden">
+            <span class="vol-label">볼륨</span>
+            <input type="range" id="music-volume" min="0" max="100" value="40" />
+          </div>
+        </div>
       </div>
 
       <button id="btn-start" class="btn-primary">시작하기</button>

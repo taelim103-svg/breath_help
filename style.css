@@ -175,6 +175,46 @@ html, body {
   font-weight: 600;
 }
 
+.tracks-row { margin-top: 8px; }
+
+.vol-wrap {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vol-wrap.hidden { display: none; }
+.vol-label {
+  font-size: 12px;
+  color: var(--fg-sub);
+  letter-spacing: 1px;
+  min-width: 36px;
+}
+#music-volume {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+#music-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+#music-volume::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  cursor: pointer;
+}
+
 .toggle-row { display: flex; gap: 8px; }
 .toggle {
   flex: 1;

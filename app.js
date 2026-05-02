@@ -86,6 +86,14 @@ const state = {
   wakeLock: null,
 };
 
+const music = {
+  mode: 'off',          // 'off' | 'drone' | 'ocean' | 'track1' | 'track2' | 'track3'
+  volume: 0.4,
+  nodes: null,
+  el: null,
+  masterGain: null,
+};
+
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -169,6 +177,18 @@ function bindSetup() {
   $('#opt-beep').addEventListener('change', e => state.opt.beep = e.target.checked);
   $('#opt-voice').addEventListener('change', e => state.opt.voice = e.target.checked);
 
+  $$('.chip[data-music]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.chip[data-music]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      music.mode = btn.dataset.music;
+      $('#music-volume-wrap').classList.toggle('hidden', music.mode === 'off');
+    });
+  });
+  $('#music-volume').addEventListener('input', e => {
+    setMusicVolume(Number(e.target.value) / 100);
+  });
+
   $('#btn-start').addEventListener('click', startSession);
   $('#btn-back').addEventListener('click', endSession);
   $('#btn-pause').addEventListener('click', togglePause);
@@ -193,6 +213,7 @@ async function startSession() {
   $('#btn-pause').textContent = '❚❚';
 
   await requestWakeLock();
+  if (music.mode !== 'off') startMusic(music.mode);
   announcePhase(true);
   state.rafId = requestAnimationFrame(tick);
 }
@@ -202,6 +223,7 @@ function endSession(showDone) {
   if (state.rafId) cancelAnimationFrame(state.rafId);
   state.rafId = null;
   releaseWakeLock();
+  stopMusic();
   if ('speechSynthesis' in window) speechSynthesis.cancel();
 
   if (showDone === true) {
@@ -221,9 +243,11 @@ function togglePause() {
   if (!state.paused) {
     state.lastTs = performance.now();
     state.rafId = requestAnimationFrame(tick);
+    resumeMusic();
   } else {
     if (state.rafId) cancelAnimationFrame(state.rafId);
     state.rafId = null;
+    pauseMusic();
   }
 }
 
@@ -325,6 +349,166 @@ function beep(freq, durSec) {
   osc.connect(gain).connect(ctx.destination);
   osc.start();
   osc.stop(ctx.currentTime + durSec + 0.05);
+}
+
+// ========== Background Music ==========
+function ensureMusicGain() {
+  if (music.masterGain) return music.masterGain;
+  if (!state.audioCtx) return null;
+  music.masterGain = state.audioCtx.createGain();
+  music.masterGain.gain.value = 0;
+  music.masterGain.connect(state.audioCtx.destination);
+  return music.masterGain;
+}
+
+function startMusic(mode) {
+  stopMusic(true);
+  music.mode = mode;
+  if (mode === 'off') return;
+  initAudio();
+  const ctx = state.audioCtx;
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+
+  if (mode === 'drone' || mode === 'ocean') {
+    const master = ensureMusicGain();
+    if (!master) return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(music.volume, ctx.currentTime + 2);
+    music.nodes = mode === 'drone' ? createDrone(ctx, master) : createOcean(ctx, master);
+  } else if (mode.startsWith('track')) {
+    const num = mode.replace('track', '');
+    const audio = new Audio(`audio/track${num}.mp3`);
+    audio.loop = true;
+    audio.volume = 0;
+    audio.play().then(() => {
+      const start = performance.now();
+      const fade = () => {
+        const t = Math.min(1, (performance.now() - start) / 2000);
+        audio.volume = music.volume * t;
+        if (t < 1 && music.el === audio) requestAnimationFrame(fade);
+      };
+      fade();
+    }).catch(err => {
+      console.warn('mp3 재생 실패 — audio/track' + num + '.mp3 파일이 없거나 재생 차단됨', err);
+      music.mode = 'off';
+    });
+    music.el = audio;
+  }
+}
+
+function stopMusic(immediate) {
+  const ctx = state.audioCtx;
+  if (music.masterGain && ctx) {
+    music.masterGain.gain.cancelScheduledValues(ctx.currentTime);
+    music.masterGain.gain.setValueAtTime(music.masterGain.gain.value, ctx.currentTime);
+    music.masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + (immediate ? 0.05 : 1.0));
+  }
+  const nodesToStop = music.nodes;
+  const elToStop = music.el;
+  music.nodes = null;
+  music.el = null;
+  setTimeout(() => {
+    if (nodesToStop) {
+      nodesToStop.forEach(n => { try { n.stop && n.stop(); } catch(e) {} try { n.disconnect(); } catch(e) {} });
+    }
+    if (elToStop) {
+      try { elToStop.pause(); elToStop.src = ''; } catch(e) {}
+    }
+  }, immediate ? 80 : 1100);
+}
+
+function pauseMusic() {
+  if (music.el) music.el.pause();
+  if (music.masterGain && state.audioCtx) {
+    music.masterGain.gain.linearRampToValueAtTime(0, state.audioCtx.currentTime + 0.3);
+  }
+}
+function resumeMusic() {
+  if (music.el) music.el.play().catch(() => {});
+  if (music.masterGain && state.audioCtx && music.mode !== 'off') {
+    music.masterGain.gain.linearRampToValueAtTime(music.volume, state.audioCtx.currentTime + 0.3);
+  }
+}
+
+function setMusicVolume(v) {
+  music.volume = v;
+  if (music.el) music.el.volume = v;
+  if (music.masterGain && state.audioCtx && music.mode !== 'off') {
+    music.masterGain.gain.linearRampToValueAtTime(v, state.audioCtx.currentTime + 0.3);
+  }
+}
+
+// 저음 화음 드론 — 차분한 명상 분위기
+function createDrone(ctx, dest) {
+  const nodes = [];
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 700;
+  filter.Q.value = 0.7;
+  filter.connect(dest);
+
+  const fundamentals = [110, 165]; // A2 + E3 (5도 화음)
+  fundamentals.forEach(freq => {
+    [-7, 0, 7].forEach(cents => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq * Math.pow(2, cents / 1200);
+      const g = ctx.createGain();
+      g.gain.value = 0.04;
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.06 + Math.random() * 0.05;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 0.025;
+      lfo.connect(lfoGain).connect(g.gain);
+      osc.connect(g).connect(filter);
+      osc.start();
+      lfo.start();
+      nodes.push(osc, lfo);
+    });
+  });
+  return nodes;
+}
+
+// 화이트노이즈 + 밴드패스 + LFO로 파도 느낌
+function createOcean(ctx, dest) {
+  const nodes = [];
+  const bufSize = ctx.sampleRate * 4;
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  const noise = ctx.createBufferSource();
+  noise.buffer = buf;
+  noise.loop = true;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 600;
+  filter.Q.value = 1.4;
+
+  const gain = ctx.createGain();
+  gain.gain.value = 0.45;
+
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.15;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 0.4;
+  lfo.connect(lfoGain).connect(gain.gain);
+
+  const fLfo = ctx.createOscillator();
+  fLfo.frequency.value = 0.1;
+  const fLfoGain = ctx.createGain();
+  fLfoGain.gain.value = 250;
+  fLfo.connect(fLfoGain).connect(filter.frequency);
+
+  noise.connect(filter).connect(gain).connect(dest);
+  noise.start();
+  lfo.start();
+  fLfo.start();
+
+  nodes.push(noise, lfo, fLfo);
+  return nodes;
 }
 
 function primeVoice() {
