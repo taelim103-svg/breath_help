@@ -109,8 +109,10 @@ const metro = {
   startedAt: 0,          // performance.now() at start
   pausedElapsed: 0,      // accumulated elapsed before pause (ms)
   pausedAt: 0,
-  scheduledBeats: [],    // beats already scheduled (audio time)
+  scheduledBeats: [],    // beats already scheduled (audio time) — 처리된 항목은 주기적으로 정리
   visualBeatIdx: 0,      // index into scheduledBeats for visual loop
+  totalBeatsShown: 0,    // 사용자에게 보여주는 누적 박자 수 (배열 정리와 무관하게 단조 증가)
+  lastBeatTime: 0,       // 마지막 박자가 들린 audio time (페이드 계산용)
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -437,6 +439,8 @@ async function startMetronome() {
   metro.beatCount = 0;
   metro.scheduledBeats = [];
   metro.visualBeatIdx = 0;
+  metro.totalBeatsShown = 0;
+  metro.lastBeatTime = 0;
   metro.startedAt = performance.now();
   metro.pausedElapsed = 0;
   metro.nextBeatTime = ctx.currentTime + 0.1;
@@ -457,9 +461,15 @@ async function startMetronome() {
 function metroScheduler() {
   if (!metro.running || metro.paused) return;
   const ctx = state.audioCtx;
+
+  // 백그라운드/화면 잠금 시 setTimeout이 throttle될 수 있어 자동 복구
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+
   const interval = 60.0 / metro.bpm;
-  // 화면이 꺼지면 setTimeout이 1초로 throttle되므로 1.2초 미리 스케줄해두면 안정적
-  const lookahead = 1.2;
+  // 화면 잠금 시 setTimeout이 1초+로 throttle되므로 3초 미리 스케줄
+  const lookahead = 3.0;
 
   while (metro.nextBeatTime < ctx.currentTime + lookahead) {
     if (metro.click) scheduleClick(metro.nextBeatTime, metro.clickType);
@@ -467,7 +477,7 @@ function metroScheduler() {
     metro.beatCount++;
     metro.nextBeatTime += interval;
   }
-  metro.schedulerId = setTimeout(metroScheduler, 200);
+  metro.schedulerId = setTimeout(metroScheduler, 500);
 }
 
 function metroVisualLoop() {
@@ -478,23 +488,28 @@ function metroVisualLoop() {
   // 이미 시간 지난 박자에 대해 시각 펄스 트리거
   while (metro.visualBeatIdx < metro.scheduledBeats.length &&
          metro.scheduledBeats[metro.visualBeatIdx] <= ctx.currentTime) {
-    const beatNum = metro.visualBeatIdx + 1;
-    $('#metro-beats').textContent = beatNum;
+    metro.totalBeatsShown++;
+    metro.lastBeatTime = metro.scheduledBeats[metro.visualBeatIdx];
+    $('#metro-beats').textContent = metro.totalBeatsShown;
     if (metro.vibrate && 'vibrate' in navigator && !metro.paused) {
       navigator.vibrate(30);
     }
-    // 펄스 ON
     pulse.classList.remove('beat');
     void pulse.offsetWidth; // reflow to restart
     pulse.classList.add('beat');
     metro.visualBeatIdx++;
   }
 
-  // 비트 사이에 페이드 아웃 (다음 비트 직전까지 0.6 비율로 페이드)
+  // 메모리 누적 방지: 처리된 비트가 100개 이상 쌓이면 잘라냄
+  if (metro.visualBeatIdx >= 100) {
+    metro.scheduledBeats.splice(0, metro.visualBeatIdx);
+    metro.visualBeatIdx = 0;
+  }
+
+  // 비트 사이 페이드 아웃 (마지막 박자 시간 기준)
   const interval = 60.0 / metro.bpm;
-  if (metro.visualBeatIdx > 0) {
-    const lastBeat = metro.scheduledBeats[metro.visualBeatIdx - 1];
-    const phase = Math.min(1, (ctx.currentTime - lastBeat) / (interval * 0.5));
+  if (metro.lastBeatTime > 0) {
+    const phase = Math.min(1, (ctx.currentTime - metro.lastBeatTime) / (interval * 0.5));
     pulse.style.opacity = (1 - phase) * 1.0;
   }
 
