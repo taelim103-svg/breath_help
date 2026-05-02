@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <title>호흡 가이드</title>
+  <title>마인드풀 페이스</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -16,9 +16,39 @@
 <body>
   <main id="app">
 
-    <!-- 시작(설정) 화면 -->
-    <section id="screen-setup" class="screen active">
+    <!-- 홈 메뉴 화면 -->
+    <section id="screen-home" class="screen active">
       <header class="brand">
+        <div class="brand-mark">마인드풀 페이스</div>
+        <div class="brand-sub">MINDFUL · PACE</div>
+      </header>
+
+      <div class="menu-list">
+        <button class="menu-card" data-go="screen-setup">
+          <div class="menu-icon">🫁</div>
+          <div class="menu-text">
+            <div class="menu-title">호흡 가이드</div>
+            <div class="menu-desc">7-4-8, Box, Coherent 등 5가지 호흡법</div>
+          </div>
+          <div class="menu-arrow">›</div>
+        </button>
+        <button class="menu-card" data-go="screen-metro-setup">
+          <div class="menu-icon">⏱</div>
+          <div class="menu-text">
+            <div class="menu-title">달리기 메트로놈</div>
+            <div class="menu-desc">180 BPM 케이던스 페이서</div>
+          </div>
+          <div class="menu-arrow">›</div>
+        </button>
+      </div>
+
+      <p class="tip">호흡 가이드는 명상에, 메트로놈은 달리기 페이스에</p>
+    </section>
+
+    <!-- 시작(호흡 설정) 화면 -->
+    <section id="screen-setup" class="screen">
+      <header class="brand">
+        <button class="back-btn" data-go="screen-home" aria-label="홈으로">‹</button>
         <div class="brand-mark">호흡 가이드</div>
         <div class="brand-sub">BREATH</div>
       </header>
@@ -150,6 +180,93 @@
       <h2>완료했습니다</h2>
       <p id="done-summary">0회 · 00:00</p>
       <button id="btn-again" class="btn-primary">다시 하기</button>
+      <button data-go="screen-home" class="btn-text">홈으로</button>
+    </section>
+
+    <!-- 메트로놈 설정 화면 -->
+    <section id="screen-metro-setup" class="screen">
+      <header class="brand">
+        <button class="back-btn" data-go="screen-home" aria-label="홈으로">‹</button>
+        <div class="brand-mark">메트로놈</div>
+        <div class="brand-sub">RUNNING · PACE</div>
+      </header>
+
+      <div class="intro">
+        <h1>달리기 케이던스</h1>
+        <p>180 BPM은 효율적인 러닝 케이던스의 기준입니다</p>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>BPM</label>
+          <div class="chip-row">
+            <button class="chip" data-bpm="160">160</button>
+            <button class="chip" data-bpm="170">170</button>
+            <button class="chip active" data-bpm="180">180</button>
+            <button class="chip" data-bpm="190">190</button>
+            <button class="chip" data-bpm="200">200</button>
+          </div>
+          <div class="bpm-slider-wrap">
+            <input type="range" id="bpm-slider" min="60" max="220" value="180" />
+            <div class="bpm-display"><span id="bpm-display">180</span> <span class="bpm-unit">BPM</span></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>피드백</label>
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="metro-vibrate" />
+              <span>진동</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="metro-click" checked />
+              <span>클릭음</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>클릭음 종류</label>
+          <div class="chip-row">
+            <button class="chip active" data-click="wood">우드</button>
+            <button class="chip" data-click="beep">비프</button>
+            <button class="chip" data-click="tick">틱</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-metro-start" class="btn-primary">시작하기</button>
+      <p class="tip">화면이 꺼져도 계속 작동합니다 (휴대폰 음악과 함께 사용 가능)</p>
+    </section>
+
+    <!-- 메트로놈 실행 화면 -->
+    <section id="screen-metro-run" class="screen">
+      <header class="run-header">
+        <button id="btn-metro-back" class="icon-btn" aria-label="종료">✕</button>
+        <div class="run-title">메트로놈</div>
+        <button id="btn-metro-pause" class="icon-btn" aria-label="일시정지">❚❚</button>
+      </header>
+
+      <div class="metro-wrap">
+        <div class="metro-pulse-bg"></div>
+        <div id="metro-pulse" class="metro-pulse"></div>
+        <div class="metro-center">
+          <div class="metro-bpm-num" id="metro-bpm-big">180</div>
+          <div class="metro-bpm-unit">BPM</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num" id="metro-beats">0</div>
+          <div class="stat-lab">박자</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="metro-elapsed">00:00</div>
+          <div class="stat-lab">경과</div>
+        </div>
+      </div>
     </section>
 
   </main>

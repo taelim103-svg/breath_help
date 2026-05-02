@@ -41,10 +41,30 @@ html, body {
   padding-bottom: max(env(safe-area-inset-bottom), 24px);
 }
 .screen.active { display: flex; }
-#screen-setup { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#screen-setup, #screen-metro-setup { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 /* ========== 시작 화면 ========== */
-.brand { text-align: center; margin-top: 4px; margin-bottom: 16px; }
+.brand { position: relative; text-align: center; margin-top: 4px; margin-bottom: 16px; }
+.back-btn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px; height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg);
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.back-btn:active { background: rgba(255, 255, 255, 0.12); }
 .brand-mark {
   font-size: 22px;
   font-weight: 700;
@@ -272,6 +292,155 @@ html, body {
   color: var(--fg-dim);
   margin-bottom: 4px;
 }
+
+/* ========== 홈 메뉴 ========== */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 32px;
+}
+.menu-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 22px 20px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--fg);
+  text-align: left;
+  transition: transform 0.1s, border-color 0.2s;
+}
+.menu-card:active { transform: scale(0.98); border-color: var(--pink); }
+.menu-icon {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 143, 177, 0.18), rgba(122, 211, 255, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.menu-text { flex: 1; }
+.menu-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.menu-desc { font-size: 12px; color: var(--fg-sub); line-height: 1.4; }
+.menu-arrow {
+  font-size: 28px;
+  color: var(--fg-dim);
+  font-weight: 300;
+}
+
+#screen-home { justify-content: flex-start; }
+#screen-home .tip { margin-top: auto; }
+
+.btn-text {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--fg-sub);
+  padding: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+/* ========== 메트로놈 설정 ========== */
+.bpm-slider-wrap {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+#bpm-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+#bpm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#bpm-slider::-moz-range-thumb {
+  width: 22px; height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  cursor: pointer;
+}
+.bpm-display {
+  min-width: 70px;
+  text-align: right;
+  font-size: 18px;
+  font-weight: 600;
+}
+.bpm-unit { font-size: 12px; color: var(--fg-sub); margin-left: 2px; }
+
+/* ========== 메트로놈 실행 ========== */
+.metro-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.metro-pulse-bg, .metro-pulse {
+  position: absolute;
+  width: min(70vw, 300px);
+  height: min(70vw, 300px);
+  border-radius: 50%;
+}
+.metro-pulse-bg {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.metro-pulse {
+  background: radial-gradient(circle, rgba(255, 143, 177, 0.5) 0%, rgba(122, 211, 255, 0.2) 60%, transparent 100%);
+  transform-origin: center;
+  transition: opacity 0.05s linear;
+  opacity: 0;
+  box-shadow: 0 0 60px rgba(255, 143, 177, 0.4);
+}
+.metro-pulse.beat {
+  opacity: 1;
+}
+
+.metro-center {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  pointer-events: none;
+}
+.metro-bpm-num {
+  font-size: 96px;
+  font-weight: 200;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.metro-bpm-unit {
+  font-size: 16px;
+  color: var(--fg-sub);
+  letter-spacing: 4px;
+  margin-top: 8px;
+}
+
+#screen-metro-run.paused .metro-pulse { animation: pulse 1.5s ease-in-out infinite; opacity: 0.5; }
 
 /* ========== 호흡 화면 ========== */
 .run-header {

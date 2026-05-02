@@ -1,7 +1,7 @@
 {
-  "name": "7-4-8 호흡 가이드",
-  "short_name": "748호흡",
-  "description": "7초 들이마시고 4초 멈추고 8초 내쉬는 호흡으로 심박을 가라앉힙니다",
+  "name": "마인드풀 페이스",
+  "short_name": "Mindful Pace",
+  "description": "명상 호흡 가이드와 달리기 메트로놈을 한 곳에서",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -94,6 +94,24 @@ const music = {
   masterGain: null,
 };
 
+const metro = {
+  bpm: 180,
+  click: true,
+  vibrate: false,
+  clickType: 'wood',     // 'wood' | 'beep' | 'tick'
+  running: false,
+  paused: false,
+  nextBeatTime: 0,       // audio context time for next beat
+  beatCount: 0,
+  schedulerId: null,
+  rafId: null,
+  startedAt: 0,          // performance.now() at start
+  pausedElapsed: 0,      // accumulated elapsed before pause (ms)
+  pausedAt: 0,
+  scheduledBeats: [],    // beats already scheduled (audio time)
+  visualBeatIdx: 0,      // index into scheduledBeats for visual loop
+};
+
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -107,6 +125,18 @@ function getCycleSec() { return getPhases().reduce((s, p) => s + p.sec, 0); }
 function showScreen(id) {
   $$('.screen').forEach(s => s.classList.remove('active'));
   $('#' + id).classList.add('active');
+}
+
+function bindNavigation() {
+  $$('[data-go]').forEach(el => {
+    el.addEventListener('click', () => {
+      const target = el.dataset.go;
+      // 호흡/메트로놈 실행 중이면 정리
+      if (state.running) endSession(false);
+      if (metro.running) stopMetronome();
+      showScreen(target);
+    });
+  });
 }
 
 // ========== 호흡법 카드 렌더링 ==========
@@ -351,6 +381,211 @@ function beep(freq, durSec) {
   osc.stop(ctx.currentTime + durSec + 0.05);
 }
 
+// ========== Metronome ==========
+function bindMetronome() {
+  $$('.chip[data-bpm]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.chip[data-bpm]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      metro.bpm = Number(btn.dataset.bpm);
+      $('#bpm-slider').value = metro.bpm;
+      $('#bpm-display').textContent = metro.bpm;
+    });
+  });
+  $('#bpm-slider').addEventListener('input', e => {
+    metro.bpm = Number(e.target.value);
+    $('#bpm-display').textContent = metro.bpm;
+    // chip 활성 상태 갱신
+    $$('.chip[data-bpm]').forEach(b => {
+      b.classList.toggle('active', Number(b.dataset.bpm) === metro.bpm);
+    });
+  });
+
+  $('#metro-vibrate').addEventListener('change', e => metro.vibrate = e.target.checked);
+  $('#metro-click').addEventListener('change', e => metro.click = e.target.checked);
+
+  $$('.chip[data-click]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.chip[data-click]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      metro.clickType = btn.dataset.click;
+    });
+  });
+
+  $('#btn-metro-start').addEventListener('click', startMetronome);
+  $('#btn-metro-back').addEventListener('click', () => {
+    stopMetronome();
+    showScreen('screen-home');
+  });
+  $('#btn-metro-pause').addEventListener('click', toggleMetroPause);
+}
+
+async function startMetronome() {
+  initAudio();
+  const ctx = state.audioCtx;
+  if (!ctx) return;
+  if (ctx.state === 'suspended') await ctx.resume();
+
+  metro.running = true;
+  metro.paused = false;
+  metro.beatCount = 0;
+  metro.scheduledBeats = [];
+  metro.visualBeatIdx = 0;
+  metro.startedAt = performance.now();
+  metro.pausedElapsed = 0;
+  metro.nextBeatTime = ctx.currentTime + 0.1;
+
+  $('#metro-bpm-big').textContent = metro.bpm;
+  $('#metro-beats').textContent = '0';
+  $('#metro-elapsed').textContent = '00:00';
+  $('#screen-metro-run').classList.remove('paused');
+  $('#btn-metro-pause').textContent = '❚❚';
+
+  showScreen('screen-metro-run');
+  await requestWakeLock();
+
+  metroScheduler();
+  metro.rafId = requestAnimationFrame(metroVisualLoop);
+}
+
+function metroScheduler() {
+  if (!metro.running || metro.paused) return;
+  const ctx = state.audioCtx;
+  const interval = 60.0 / metro.bpm;
+  // 화면이 꺼지면 setTimeout이 1초로 throttle되므로 1.2초 미리 스케줄해두면 안정적
+  const lookahead = 1.2;
+
+  while (metro.nextBeatTime < ctx.currentTime + lookahead) {
+    if (metro.click) scheduleClick(metro.nextBeatTime, metro.clickType);
+    metro.scheduledBeats.push(metro.nextBeatTime);
+    metro.beatCount++;
+    metro.nextBeatTime += interval;
+  }
+  metro.schedulerId = setTimeout(metroScheduler, 200);
+}
+
+function metroVisualLoop() {
+  if (!metro.running) return;
+  const ctx = state.audioCtx;
+  const pulse = $('#metro-pulse');
+
+  // 이미 시간 지난 박자에 대해 시각 펄스 트리거
+  while (metro.visualBeatIdx < metro.scheduledBeats.length &&
+         metro.scheduledBeats[metro.visualBeatIdx] <= ctx.currentTime) {
+    const beatNum = metro.visualBeatIdx + 1;
+    $('#metro-beats').textContent = beatNum;
+    if (metro.vibrate && 'vibrate' in navigator && !metro.paused) {
+      navigator.vibrate(30);
+    }
+    // 펄스 ON
+    pulse.classList.remove('beat');
+    void pulse.offsetWidth; // reflow to restart
+    pulse.classList.add('beat');
+    metro.visualBeatIdx++;
+  }
+
+  // 비트 사이에 페이드 아웃 (다음 비트 직전까지 0.6 비율로 페이드)
+  const interval = 60.0 / metro.bpm;
+  if (metro.visualBeatIdx > 0) {
+    const lastBeat = metro.scheduledBeats[metro.visualBeatIdx - 1];
+    const phase = Math.min(1, (ctx.currentTime - lastBeat) / (interval * 0.5));
+    pulse.style.opacity = (1 - phase) * 1.0;
+  }
+
+  // 경과 시간 = 누적 + 현재 구간
+  const elapsedMs = metro.paused
+    ? metro.pausedElapsed
+    : (performance.now() - metro.startedAt) + metro.pausedElapsed;
+  const total = Math.floor(elapsedMs / 1000);
+  const m = String(Math.floor(total / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
+  $('#metro-elapsed').textContent = `${m}:${s}`;
+
+  metro.rafId = requestAnimationFrame(metroVisualLoop);
+}
+
+function stopMetronome() {
+  metro.running = false;
+  metro.paused = false;
+  if (metro.schedulerId) clearTimeout(metro.schedulerId);
+  if (metro.rafId) cancelAnimationFrame(metro.rafId);
+  metro.schedulerId = null;
+  metro.rafId = null;
+  metro.scheduledBeats = [];
+  releaseWakeLock();
+  const pulse = $('#metro-pulse');
+  if (pulse) { pulse.classList.remove('beat'); pulse.style.opacity = ''; }
+}
+
+function toggleMetroPause() {
+  if (!metro.running) return;
+  const ctx = state.audioCtx;
+  metro.paused = !metro.paused;
+  $('#screen-metro-run').classList.toggle('paused', metro.paused);
+  $('#btn-metro-pause').textContent = metro.paused ? '▶' : '❚❚';
+  if (metro.paused) {
+    metro.pausedAt = performance.now();
+    metro.pausedElapsed += metro.pausedAt - metro.startedAt;
+    if (metro.schedulerId) clearTimeout(metro.schedulerId);
+    metro.schedulerId = null;
+    if (metro.rafId) cancelAnimationFrame(metro.rafId);
+    metro.rafId = null;
+  } else {
+    metro.startedAt = performance.now();
+    metro.nextBeatTime = ctx.currentTime + 0.1;
+    metroScheduler();
+    metro.rafId = requestAnimationFrame(metroVisualLoop);
+  }
+}
+
+function scheduleClick(time, type) {
+  const ctx = state.audioCtx;
+  if (type === 'wood') {
+    // 짧은 노이즈 + 밴드패스 (우드블록 느낌)
+    const dur = 0.04;
+    const bufSize = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.3));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1500;
+    filter.Q.value = 8;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.5;
+    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.start(time);
+    src.stop(time + dur);
+  } else if (type === 'beep') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 1500;
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.25, time + 0.001);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(time);
+    osc.stop(time + 0.05);
+  } else { // tick
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(2000, time);
+    osc.frequency.exponentialRampToValueAtTime(800, time + 0.02);
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.35, time + 0.001);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(time);
+    osc.stop(time + 0.04);
+  }
+}
+
 // ========== Background Music ==========
 function ensureMusicGain() {
   if (music.masterGain) return music.masterGain;
@@ -544,7 +779,8 @@ function releaseWakeLock() {
   if (state.wakeLock) { state.wakeLock.release().catch(() => {}); state.wakeLock = null; }
 }
 document.addEventListener('visibilitychange', async () => {
-  if (state.running && !state.paused && document.visibilityState === 'visible' && !state.wakeLock) {
+  const anyRunning = (state.running && !state.paused) || (metro.running && !metro.paused);
+  if (anyRunning && document.visibilityState === 'visible' && !state.wakeLock) {
     await requestWakeLock();
   }
 });
@@ -564,4 +800,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+bindNavigation();
 bindSetup();
+bindMetronome();

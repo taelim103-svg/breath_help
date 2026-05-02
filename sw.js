@@ -1,4 +1,4 @@
-const CACHE = 'breath-guide-v4';
+const CACHE = 'mindful-pace-v5';
 const ASSETS = [
   './',
   './index.html',
