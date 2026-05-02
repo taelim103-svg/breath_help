@@ -1,0 +1,279 @@
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg-1: #1a0d2e;
+  --bg-2: #2d1b4e;
+  --bg-3: #4a1f5c;
+  --fg: #f5e9ff;
+  --fg-sub: #c9b8e0;
+  --fg-dim: #8a7aa3;
+  --pink: #ff8fb1;
+  --blue: #7ad3ff;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(255, 255, 255, 0.12);
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  position: relative;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: env(safe-area-inset-top, 16px) 20px env(safe-area-inset-bottom, 16px);
+  padding-top: max(env(safe-area-inset-top), 24px);
+  padding-bottom: max(env(safe-area-inset-bottom), 24px);
+}
+.screen.active { display: flex; }
+
+/* ========== 시작 화면 ========== */
+.brand { text-align: center; margin-top: 8px; margin-bottom: 24px; }
+.brand-mark {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-sub { font-size: 12px; color: var(--fg-sub); margin-top: 2px; letter-spacing: 4px; }
+
+.intro { text-align: center; margin-bottom: 28px; }
+.intro h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.intro p { font-size: 14px; color: var(--fg-sub); }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.field { margin-bottom: 18px; }
+.field:last-child { margin-bottom: 0; }
+.field.hidden { display: none; }
+.field label {
+  display: block;
+  font-size: 13px;
+  color: var(--fg-sub);
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.seg {
+  display: flex;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+.seg-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg-sub);
+  padding: 10px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.seg-btn.active {
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  color: #1a0d2e;
+  font-weight: 600;
+}
+
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  flex: 1;
+  min-width: 60px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  color: var(--fg);
+  padding: 12px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.chip.active {
+  background: rgba(255, 143, 177, 0.2);
+  border-color: var(--pink);
+  color: var(--pink);
+  font-weight: 600;
+}
+
+.toggle-row { display: flex; gap: 8px; }
+.toggle {
+  flex: 1;
+  display: block;
+  position: relative;
+  cursor: pointer;
+}
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle span {
+  display: block;
+  text-align: center;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  font-size: 14px;
+  transition: all 0.2s;
+  color: var(--fg-sub);
+}
+.toggle input:checked + span {
+  background: rgba(122, 211, 255, 0.18);
+  border-color: var(--blue);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.btn-primary {
+  margin-top: auto;
+  margin-bottom: 8px;
+  width: 100%;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  color: #1a0d2e;
+  border: none;
+  padding: 18px;
+  border-radius: 18px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 8px 24px rgba(255, 143, 177, 0.3);
+  transition: transform 0.1s;
+}
+.btn-primary:active { transform: scale(0.98); }
+
+.tip {
+  text-align: center;
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-bottom: 4px;
+}
+
+/* ========== 호흡 화면 ========== */
+.run-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.run-title { font-size: 15px; color: var(--fg-sub); letter-spacing: 2px; }
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--fg);
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ring-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ring {
+  width: min(82vw, 360px);
+  height: min(82vw, 360px);
+  transform: rotate(-90deg);
+}
+.ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 12;
+}
+.ring-fg {
+  fill: none;
+  stroke: url(#grad);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-dasharray: 678.58;
+  stroke-dashoffset: 678.58;
+  transition: stroke-dashoffset 0.1s linear;
+  filter: drop-shadow(0 0 8px rgba(255, 143, 177, 0.4));
+}
+
+.ring-center {
+  position: absolute;
+  text-align: center;
+  pointer-events: none;
+}
+.phase-label {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: opacity 0.2s;
+}
+.phase-time { font-size: 56px; font-weight: 200; line-height: 1; }
+.sec-unit { font-size: 22px; color: var(--fg-sub); margin-left: 4px; }
+.phase-of { font-size: 14px; color: var(--fg-dim); margin-top: 8px; }
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 20px 0 8px;
+  border-top: 1px solid var(--card-border);
+  margin-top: 16px;
+}
+.stat { text-align: center; }
+.stat-num { font-size: 24px; font-weight: 600; }
+.stat-lab { font-size: 12px; color: var(--fg-sub); margin-top: 4px; letter-spacing: 1px; }
+
+/* ========== 완료 화면 ========== */
+#screen-done { align-items: center; justify-content: center; text-align: center; }
+.done-mark {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  color: #1a0d2e;
+  font-size: 48px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(255, 143, 177, 0.4);
+}
+#screen-done h2 { font-size: 28px; margin-bottom: 8px; }
+#done-summary { color: var(--fg-sub); margin-bottom: 40px; }
+#screen-done .btn-primary { margin-top: 0; max-width: 280px; }
+
+/* 일시정지 상태에서 링 점멸 */
+.paused .ring-fg { animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

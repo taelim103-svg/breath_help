@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#1a0d2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>7-4-8 호흡</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+
+    <!-- 시작(설정) 화면 -->
+    <section id="screen-setup" class="screen active">
+      <header class="brand">
+        <div class="brand-mark">7·4·8</div>
+        <div class="brand-sub">호흡 가이드</div>
+      </header>
+
+      <div class="intro">
+        <h1>심박을 가라앉히는 호흡</h1>
+        <p>7초 들이마시고 · 4초 멈추고 · 8초 내쉽니다</p>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>종료 조건</label>
+          <div class="seg" role="tablist">
+            <button class="seg-btn active" data-mode="count">횟수</button>
+            <button class="seg-btn" data-mode="time">시간</button>
+          </div>
+        </div>
+
+        <div class="field" id="field-count">
+          <label>사이클 횟수</label>
+          <div class="chip-row">
+            <button class="chip" data-count="4">4회</button>
+            <button class="chip active" data-count="8">8회</button>
+            <button class="chip" data-count="12">12회</button>
+            <button class="chip" data-count="20">20회</button>
+          </div>
+        </div>
+
+        <div class="field hidden" id="field-time">
+          <label>총 시간</label>
+          <div class="chip-row">
+            <button class="chip" data-time="3">3분</button>
+            <button class="chip active" data-time="5">5분</button>
+            <button class="chip" data-time="10">10분</button>
+            <button class="chip" data-time="15">15분</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>알림</label>
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="opt-vibrate" checked />
+              <span>진동</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="opt-beep" checked />
+              <span>비프음</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="opt-voice" />
+              <span>음성 안내</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-start" class="btn-primary">시작하기</button>
+      <p class="tip">시작 시 화면이 켜진 상태로 유지됩니다</p>
+    </section>
+
+    <!-- 호흡 화면 -->
+    <section id="screen-run" class="screen">
+      <header class="run-header">
+        <button id="btn-back" class="icon-btn" aria-label="종료">✕</button>
+        <div class="run-title">7·4·8 호흡</div>
+        <button id="btn-pause" class="icon-btn" aria-label="일시정지">❚❚</button>
+      </header>
+
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 240 240">
+          <defs>
+            <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ff8fb1" />
+              <stop offset="100%" stop-color="#7ad3ff" />
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="120" cy="120" r="108" />
+          <circle class="ring-fg" cx="120" cy="120" r="108" />
+        </svg>
+        <div class="ring-center">
+          <div id="phase-label" class="phase-label">준비</div>
+          <div class="phase-time">
+            <span id="phase-sec">0</span><span class="sec-unit">초</span>
+          </div>
+          <div id="phase-of" class="phase-of">/ 0초</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num" id="stat-cycle">0</div>
+          <div class="stat-lab">사이클</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-elapsed">00:00</div>
+          <div class="stat-lab">경과</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 완료 화면 -->
+    <section id="screen-done" class="screen">
+      <div class="done-mark">✓</div>
+      <h2>완료했습니다</h2>
+      <p id="done-summary">0회 · 00:00</p>
+      <button id="btn-again" class="btn-primary">다시 하기</button>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

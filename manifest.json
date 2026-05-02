@@ -1,0 +1,20 @@
+{
+  "name": "7-4-8 호흡 가이드",
+  "short_name": "748호흡",
+  "description": "7초 들이마시고 4초 멈추고 8초 내쉬는 호흡으로 심박을 가라앉힙니다",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a0d2e",
+  "theme_color": "#1a0d2e",
+  "lang": "ko-KR",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
