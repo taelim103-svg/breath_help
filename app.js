@@ -1,23 +1,85 @@
 'use strict';
 
-const PHASES = [
-  { key: 'inhale', label: '들이마시기', sec: 7, voice: '들이마시세요' },
-  { key: 'hold',   label: '멈추기',     sec: 4, voice: '멈추세요' },
-  { key: 'exhale', label: '내쉬기',     sec: 8, voice: '내쉬세요' },
+const TECHNIQUES = [
+  {
+    id: '748',
+    name: '7·4·8 호흡',
+    subtitle: '심박을 가라앉히는 호흡',
+    pattern: '들숨 7 · 멈춤 4 · 날숨 8',
+    desc: '심박과 긴장을 차분히 가라앉힐 때',
+    phases: [
+      { key: 'inhale', label: '들이마시기', sec: 7, voice: '들이마시세요' },
+      { key: 'hold',   label: '멈추기',     sec: 4, voice: '멈추세요' },
+      { key: 'exhale', label: '내쉬기',     sec: 8, voice: '내쉬세요' },
+    ],
+    gradient: ['#ff8fb1', '#7ad3ff'],
+  },
+  {
+    id: 'box',
+    name: 'Box Breathing',
+    subtitle: '집중과 평정을 위한 호흡',
+    pattern: '4 · 4 · 4 · 4',
+    desc: '집중력 강화, 스트레스 관리',
+    phases: [
+      { key: 'inhale',    label: '들이마시기', sec: 4, voice: '들이마시세요' },
+      { key: 'hold',      label: '멈추기',     sec: 4, voice: '멈추세요' },
+      { key: 'exhale',    label: '내쉬기',     sec: 4, voice: '내쉬세요' },
+      { key: 'holdEmpty', label: '멈추기',     sec: 4, voice: '멈추세요' },
+    ],
+    gradient: ['#a78bfa', '#60a5fa'],
+  },
+  {
+    id: '478',
+    name: '4·7·8 호흡',
+    subtitle: '잠들기 전 이완 호흡',
+    pattern: '들숨 4 · 멈춤 7 · 날숨 8',
+    desc: '수면 유도 (Dr. Andrew Weil)',
+    phases: [
+      { key: 'inhale', label: '들이마시기', sec: 4, voice: '들이마시세요' },
+      { key: 'hold',   label: '멈추기',     sec: 7, voice: '멈추세요' },
+      { key: 'exhale', label: '내쉬기',     sec: 8, voice: '내쉬세요' },
+    ],
+    gradient: ['#fbcfe8', '#c4b5fd'],
+  },
+  {
+    id: 'coherent',
+    name: 'Coherent 5·5',
+    subtitle: '균형 잡힌 명상 호흡',
+    pattern: '들숨 5 · 날숨 5',
+    desc: '자율신경 균형, 심박변이도 향상',
+    phases: [
+      { key: 'inhale', label: '들이마시기', sec: 5, voice: '들이마시세요' },
+      { key: 'exhale', label: '내쉬기',     sec: 5, voice: '내쉬세요' },
+    ],
+    gradient: ['#86efac', '#7ad3ff'],
+  },
+  {
+    id: '426',
+    name: '4·2·6 이완',
+    subtitle: '가벼운 이완 호흡',
+    pattern: '들숨 4 · 멈춤 2 · 날숨 6',
+    desc: '부교감 활성화, 일상 이완',
+    phases: [
+      { key: 'inhale', label: '들이마시기', sec: 4, voice: '들이마시세요' },
+      { key: 'hold',   label: '멈추기',     sec: 2, voice: '멈추세요' },
+      { key: 'exhale', label: '내쉬기',     sec: 6, voice: '내쉬세요' },
+    ],
+    gradient: ['#fde68a', '#fbcfe8'],
+  },
 ];
-const CYCLE_SEC = PHASES.reduce((s, p) => s + p.sec, 0); // 19
 
 const state = {
-  mode: 'count',         // 'count' | 'time'
+  techniqueId: '748',
+  mode: 'count',
   targetCount: 8,
-  targetTime: 5,         // minutes
+  targetTime: 5,
   opt: { vibrate: true, beep: true, voice: false },
   running: false,
   paused: false,
   phaseIdx: 0,
-  phaseElapsed: 0,       // ms within phase
+  phaseElapsed: 0,
   cycleDone: 0,
-  totalElapsed: 0,       // ms total
+  totalElapsed: 0,
   rafId: null,
   lastTs: 0,
   audioCtx: null,
@@ -27,14 +89,57 @@ const state = {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
+function getTechnique() {
+  return TECHNIQUES.find(t => t.id === state.techniqueId) || TECHNIQUES[0];
+}
+function getPhases() { return getTechnique().phases; }
+function getCycleSec() { return getPhases().reduce((s, p) => s + p.sec, 0); }
+
 // ========== 화면 전환 ==========
 function showScreen(id) {
   $$('.screen').forEach(s => s.classList.remove('active'));
   $('#' + id).classList.add('active');
 }
 
+// ========== 호흡법 카드 렌더링 ==========
+function renderTechniques() {
+  const slider = $('#tech-slider');
+  slider.innerHTML = TECHNIQUES.map(t => `
+    <button class="tech-card${t.id === state.techniqueId ? ' active' : ''}" data-id="${t.id}">
+      <div class="tech-card-name">${t.name}</div>
+      <div class="tech-card-pattern">${t.pattern}</div>
+      <div class="tech-card-desc">${t.desc}</div>
+    </button>
+  `).join('');
+
+  slider.querySelectorAll('.tech-card').forEach(card => {
+    card.addEventListener('click', () => {
+      state.techniqueId = card.dataset.id;
+      slider.querySelectorAll('.tech-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      applyTechniqueTheme();
+    });
+  });
+}
+
+function applyTechniqueTheme() {
+  const t = getTechnique();
+  $('#intro-title').textContent = t.subtitle;
+  $('#intro-desc').textContent = t.pattern;
+  $('#run-title').textContent = t.name;
+  const stops = $('#grad').querySelectorAll('stop');
+  stops[0].setAttribute('stop-color', t.gradient[0]);
+  stops[1].setAttribute('stop-color', t.gradient[1]);
+  document.documentElement.style.setProperty('--pink', t.gradient[0]);
+  document.documentElement.style.setProperty('--blue', t.gradient[1]);
+}
+
 // ========== 설정 화면 이벤트 ==========
 function bindSetup() {
+  renderTechniques();
+  applyTechniqueTheme();
+
   $$('.seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       $$('.seg-btn').forEach(b => b.classList.remove('active'));
@@ -72,7 +177,6 @@ function bindSetup() {
 
 // ========== 세션 시작/종료 ==========
 async function startSession() {
-  // 사용자 제스처 안에서 오디오 컨텍스트와 음성 합성 워밍업
   initAudio();
   if (state.opt.voice) primeVoice();
 
@@ -131,10 +235,10 @@ function tick(ts) {
   state.phaseElapsed += dt;
   state.totalElapsed += dt;
 
-  const phase = PHASES[state.phaseIdx];
+  const phases = getPhases();
+  const phase = phases[state.phaseIdx];
   const phaseMs = phase.sec * 1000;
 
-  // UI 업데이트
   const remaining = Math.max(0, phaseMs - state.phaseElapsed);
   const secLeft = Math.ceil(remaining / 1000);
   $('#phase-sec').textContent = secLeft;
@@ -142,19 +246,17 @@ function tick(ts) {
   $('#stat-cycle').textContent = state.cycleDone;
   $('#stat-elapsed').textContent = formatTime(state.totalElapsed);
 
-  // 링 진행도 — 사이클 전체 기준
-  const cycleProgressMs = PHASES.slice(0, state.phaseIdx).reduce((s, p) => s + p.sec * 1000, 0)
+  const cycleProgressMs = phases.slice(0, state.phaseIdx).reduce((s, p) => s + p.sec * 1000, 0)
                         + state.phaseElapsed;
-  const cycleTotalMs = CYCLE_SEC * 1000;
+  const cycleTotalMs = getCycleSec() * 1000;
   const ratio = Math.min(1, cycleProgressMs / cycleTotalMs);
-  const CIRC = 678.58; // 2 * PI * 108
+  const CIRC = 678.58;
   $('.ring-fg').style.strokeDashoffset = CIRC * (1 - ratio);
 
-  // 단계 종료 판정
   if (state.phaseElapsed >= phaseMs) {
     state.phaseElapsed -= phaseMs;
     state.phaseIdx++;
-    if (state.phaseIdx >= PHASES.length) {
+    if (state.phaseIdx >= phases.length) {
       state.phaseIdx = 0;
       state.cycleDone++;
       $('#stat-cycle').textContent = state.cycleDone;
@@ -163,7 +265,6 @@ function tick(ts) {
     announcePhase(false);
   }
 
-  // 시간 모드 종료 체크
   if (state.mode === 'time' && state.totalElapsed >= state.targetTime * 60 * 1000) {
     endSession(true);
     return;
@@ -180,21 +281,23 @@ function checkDone() {
   return false;
 }
 
-// ========== 단계 안내 (시각/햅틱/오디오/음성) ==========
+// ========== 단계 안내 ==========
 function announcePhase(initial) {
-  const phase = PHASES[state.phaseIdx];
+  const phase = getPhases()[state.phaseIdx];
   $('#phase-label').textContent = phase.label;
+
+  const isHold = phase.key === 'hold' || phase.key === 'holdEmpty';
 
   if (state.opt.vibrate && 'vibrate' in navigator) {
     const pattern = phase.key === 'inhale' ? [40] :
-                    phase.key === 'hold'   ? [20, 60, 20] :
-                                             [80];
+                    isHold                  ? [20, 60, 20] :
+                                              [80];
     navigator.vibrate(pattern);
   }
   if (state.opt.beep) {
     const freq = phase.key === 'inhale' ? 660 :
-                 phase.key === 'hold'   ? 880 :
-                                          440;
+                 isHold                  ? 880 :
+                                           440;
     beep(freq, 0.18);
   }
   if (state.opt.voice) speak(phase.voice);
@@ -224,7 +327,6 @@ function beep(freq, durSec) {
   osc.stop(ctx.currentTime + durSec + 0.05);
 }
 
-// iOS는 사용자 제스처 안에서 한 번 발화시켜야 이후 자동 발화 가능
 function primeVoice() {
   if (!('speechSynthesis' in window)) return;
   const u = new SpeechSynthesisUtterance(' ');
@@ -275,5 +377,4 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ========== 시작 ==========
 bindSetup();

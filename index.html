@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <title>7-4-8 호흡</title>
+  <title>호흡 가이드</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
@@ -19,13 +19,18 @@
     <!-- 시작(설정) 화면 -->
     <section id="screen-setup" class="screen active">
       <header class="brand">
-        <div class="brand-mark">7·4·8</div>
-        <div class="brand-sub">호흡 가이드</div>
+        <div class="brand-mark">호흡 가이드</div>
+        <div class="brand-sub">BREATH</div>
       </header>
 
       <div class="intro">
-        <h1>심박을 가라앉히는 호흡</h1>
-        <p>7초 들이마시고 · 4초 멈추고 · 8초 내쉽니다</p>
+        <h1 id="intro-title">심박을 가라앉히는 호흡</h1>
+        <p id="intro-desc">들숨 7 · 멈춤 4 · 날숨 8</p>
+      </div>
+
+      <div class="tech-section">
+        <div class="section-label">호흡법 선택</div>
+        <div id="tech-slider" class="tech-slider"></div>
       </div>
 
       <div class="card">
@@ -84,7 +89,7 @@
     <section id="screen-run" class="screen">
       <header class="run-header">
         <button id="btn-back" class="icon-btn" aria-label="종료">✕</button>
-        <div class="run-title">7·4·8 호흡</div>
+        <div id="run-title" class="run-title">7·4·8 호흡</div>
         <button id="btn-pause" class="icon-btn" aria-label="일시정지">❚❚</button>
       </header>
 

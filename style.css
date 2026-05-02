@@ -41,23 +41,72 @@ html, body {
   padding-bottom: max(env(safe-area-inset-bottom), 24px);
 }
 .screen.active { display: flex; }
+#screen-setup { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 /* ========== 시작 화면 ========== */
-.brand { text-align: center; margin-top: 8px; margin-bottom: 24px; }
+.brand { text-align: center; margin-top: 4px; margin-bottom: 16px; }
 .brand-mark {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   background: linear-gradient(135deg, var(--pink), var(--blue));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-.brand-sub { font-size: 12px; color: var(--fg-sub); margin-top: 2px; letter-spacing: 4px; }
+.brand-sub { font-size: 10px; color: var(--fg-dim); margin-top: 2px; letter-spacing: 4px; }
 
-.intro { text-align: center; margin-bottom: 28px; }
+.intro { text-align: center; margin-bottom: 20px; }
 .intro h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
 .intro p { font-size: 14px; color: var(--fg-sub); }
+
+/* 호흡법 선택 슬라이더 */
+.tech-section { margin-bottom: 20px; }
+.section-label {
+  font-size: 12px;
+  color: var(--fg-dim);
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+.tech-slider {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  margin: 0 -20px;
+  padding: 4px 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tech-slider::-webkit-scrollbar { display: none; }
+.tech-card {
+  flex: 0 0 78%;
+  scroll-snap-align: center;
+  background: var(--card);
+  border: 1.5px solid var(--card-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.1s;
+  text-align: left;
+  color: var(--fg);
+  font-family: inherit;
+}
+.tech-card:active { transform: scale(0.98); }
+.tech-card.active {
+  border-color: var(--pink);
+  background: rgba(255, 143, 177, 0.12);
+}
+.tech-card-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.tech-card-pattern {
+  font-size: 11px;
+  color: var(--fg-dim);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.tech-card-desc { font-size: 13px; color: var(--fg-sub); line-height: 1.4; }
 
 .card {
   background: var(--card);
