@@ -99,6 +99,7 @@ const metro = {
   click: true,
   vibrate: false,
   clickType: 'wood',     // 'wood' | 'beep' | 'tick'
+  volume: 0.85,
   running: false,
   paused: false,
   nextBeatTime: 0,       // audio context time for next beat
@@ -412,6 +413,11 @@ function bindMetronome() {
     });
   });
 
+  $('#metro-volume').addEventListener('input', e => {
+    metro.volume = Number(e.target.value) / 100;
+    $('#metro-volume-display').textContent = e.target.value;
+  });
+
   $('#btn-metro-start').addEventListener('click', startMetronome);
   $('#btn-metro-back').addEventListener('click', () => {
     stopMetronome();
@@ -540,6 +546,7 @@ function toggleMetroPause() {
 
 function scheduleClick(time, type) {
   const ctx = state.audioCtx;
+  const v = metro.volume;
   if (type === 'wood') {
     // 짧은 노이즈 + 밴드패스 (우드블록 느낌)
     const dur = 0.04;
@@ -556,7 +563,7 @@ function scheduleClick(time, type) {
     filter.frequency.value = 1500;
     filter.Q.value = 8;
     const gain = ctx.createGain();
-    gain.gain.value = 0.5;
+    gain.gain.value = 1.4 * v;
     src.connect(filter).connect(gain).connect(ctx.destination);
     src.start(time);
     src.stop(time + dur);
@@ -566,7 +573,7 @@ function scheduleClick(time, type) {
     osc.type = 'square';
     osc.frequency.value = 1500;
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(0.25, time + 0.001);
+    gain.gain.linearRampToValueAtTime(0.55 * v, time + 0.001);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
     osc.connect(gain).connect(ctx.destination);
     osc.start(time);
@@ -578,7 +585,7 @@ function scheduleClick(time, type) {
     osc.frequency.setValueAtTime(2000, time);
     osc.frequency.exponentialRampToValueAtTime(800, time + 0.02);
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(0.35, time + 0.001);
+    gain.gain.linearRampToValueAtTime(0.7 * v, time + 0.001);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
     osc.connect(gain).connect(ctx.destination);
     osc.start(time);
