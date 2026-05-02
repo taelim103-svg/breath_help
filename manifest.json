@@ -1,6 +1,6 @@
 {
-  "name": "마인드풀 페이스",
-  "short_name": "Mindful Pace",
+  "name": "sunny's lab",
+  "short_name": "sunny's lab",
   "description": "명상 호흡 가이드와 달리기 메트로놈을 한 곳에서",
   "start_url": "./index.html",
   "scope": "./",

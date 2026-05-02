@@ -1,4 +1,4 @@
-const CACHE = 'mindful-pace-v9';
+const CACHE = 'sunnys-lab-v10';
 const ASSETS = [
   './',
   './index.html',

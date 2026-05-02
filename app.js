@@ -553,7 +553,7 @@ function setupMediaSession() {
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `${metro.bpm} BPM`,
-      artist: '마인드풀 페이스',
+      artist: "sunny's lab",
       album: '달리기 메트로놈',
     });
     navigator.mediaSession.setActionHandler('play', () => {
