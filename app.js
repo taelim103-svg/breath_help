@@ -66,6 +66,46 @@ const TECHNIQUES = [
     ],
     gradient: ['#fde68a', '#fbcfe8'],
   },
+  {
+    id: 'lamaze-slow',
+    name: '라마즈 1단계 · 느린 호흡',
+    subtitle: '예비산모 · 진통 초기 (1단계)',
+    pattern: '코 들숨 4 · 입 날숨 6',
+    desc: '1단계 — 진통 초기 (분당 ~6회)',
+    phases: [
+      { key: 'inhale', label: '코로 들이마시기', sec: 4, voice: '들이마시세요' },
+      { key: 'exhale', label: '입으로 후~',     sec: 6, voice: '후 하고 내쉬세요' },
+    ],
+    gradient: ['#fda4af', '#f9a8d4'],
+  },
+  {
+    id: 'lamaze-mod',
+    name: '라마즈 2단계 · 변형 가속',
+    subtitle: '예비산모 · 진통 활성기 (2단계)',
+    pattern: '들숨 2 · 날숨 2',
+    desc: '2단계 — 진통 활성기 (분당 ~30회)',
+    phases: [
+      { key: 'inhale', label: '들숨', sec: 2, voice: '들숨' },
+      { key: 'exhale', label: '날숨', sec: 2, voice: '날숨' },
+    ],
+    gradient: ['#fb7185', '#c084fc'],
+  },
+  {
+    id: 'lamaze-hee',
+    name: '라마즈 3단계 · 히히후',
+    subtitle: '예비산모 · 진통 이행기 (3단계)',
+    pattern: '히 · 히 · 후',
+    desc: '3단계 — 이행기 / 강한 진통 (패턴 페이스)',
+    phases: [
+      { key: 'inhale', label: '들숨', sec: 1, voice: '들숨' },
+      { key: 'exhale', label: '히',   sec: 1, voice: '히' },
+      { key: 'inhale', label: '들숨', sec: 1, voice: '들숨' },
+      { key: 'exhale', label: '히',   sec: 1, voice: '히' },
+      { key: 'inhale', label: '들숨', sec: 1, voice: '들숨' },
+      { key: 'exhale', label: '후',   sec: 2, voice: '후' },
+    ],
+    gradient: ['#a78bfa', '#f472b6'],
+  },
 ];
 
 const state = {
