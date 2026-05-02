@@ -443,11 +443,14 @@ function setMusicVolume(v) {
 // 저음 화음 드론 — 차분한 명상 분위기
 function createDrone(ctx, dest) {
   const nodes = [];
+  // 트림 게인: Drone을 trackX 수준으로 끌어올림
+  const trim = ctx.createGain();
+  trim.gain.value = 2.2;
   const filter = ctx.createBiquadFilter();
   filter.type = 'lowpass';
-  filter.frequency.value = 700;
+  filter.frequency.value = 900;
   filter.Q.value = 0.7;
-  filter.connect(dest);
+  filter.connect(trim).connect(dest);
 
   const fundamentals = [110, 165]; // A2 + E3 (5도 화음)
   fundamentals.forEach(freq => {
@@ -456,11 +459,11 @@ function createDrone(ctx, dest) {
       osc.type = 'sine';
       osc.frequency.value = freq * Math.pow(2, cents / 1200);
       const g = ctx.createGain();
-      g.gain.value = 0.04;
+      g.gain.value = 0.07;
       const lfo = ctx.createOscillator();
       lfo.frequency.value = 0.06 + Math.random() * 0.05;
       const lfoGain = ctx.createGain();
-      lfoGain.gain.value = 0.025;
+      lfoGain.gain.value = 0.04;
       lfo.connect(lfoGain).connect(g.gain);
       osc.connect(g).connect(filter);
       osc.start();
@@ -484,22 +487,22 @@ function createOcean(ctx, dest) {
 
   const filter = ctx.createBiquadFilter();
   filter.type = 'bandpass';
-  filter.frequency.value = 600;
-  filter.Q.value = 1.4;
+  filter.frequency.value = 500;
+  filter.Q.value = 1.6;
 
   const gain = ctx.createGain();
-  gain.gain.value = 0.45;
+  gain.gain.value = 0.18;
 
   const lfo = ctx.createOscillator();
   lfo.frequency.value = 0.15;
   const lfoGain = ctx.createGain();
-  lfoGain.gain.value = 0.4;
+  lfoGain.gain.value = 0.16;
   lfo.connect(lfoGain).connect(gain.gain);
 
   const fLfo = ctx.createOscillator();
   fLfo.frequency.value = 0.1;
   const fLfoGain = ctx.createGain();
-  fLfoGain.gain.value = 250;
+  fLfoGain.gain.value = 200;
   fLfo.connect(fLfoGain).connect(filter.frequency);
 
   noise.connect(filter).connect(gain).connect(dest);

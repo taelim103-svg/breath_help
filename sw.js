@@ -1,4 +1,4 @@
-const CACHE = 'breath-guide-v3';
+const CACHE = 'breath-guide-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -6,9 +6,10 @@ const ASSETS = [
   './app.js',
   './manifest.json',
   './icon.svg',
+  './audio/track1.mp3',
+  './audio/track2.mp3',
+  './audio/track3.mp3',
 ];
-
-// audio/track*.mp3 파일은 동적 캐싱 (fetch 핸들러에서 자동 캐시)
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

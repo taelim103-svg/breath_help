@@ -176,6 +176,13 @@ html, body {
 }
 
 .tracks-row { margin-top: 8px; }
+.music-credit {
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--fg-dim);
+  letter-spacing: 0.5px;
+  text-align: right;
+}
 
 .vol-wrap {
   margin-top: 12px;
